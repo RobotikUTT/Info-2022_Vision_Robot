@@ -30,14 +30,15 @@ def draw(img, corners, imgpts):
 
 
 
-data = calibration.readConfigData("config.json")
-mtx = np.array(data["K"])
-dist = np.array(data["D"])
+data = calibration.CameraCalibration.load("config.json")
+mtx = data.mtx
+dist = data.dist
 
 
 
 for fname in glob.glob(".images/*"):
     img = cv.imread(fname)
+
     img = calibration.undistort(img, data)
 
     gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
@@ -48,10 +49,15 @@ for fname in glob.glob(".images/*"):
         img = cv.drawChessboardCorners(img, (6, 9), corners2, True)
 
         # Find the rotation and translation vectors.
-        ret,rvecs, tvecs = cv.solvePnP(objp, corners2, mtx, dist)
+        # ret,rvecs, tvecs = cv.solvePnP(objp, corners2, mtx, dist)
+        ret,rvecs, tvecs = cv.solvePnP(objp, corners2, mtx, None)
+
+        print(rvecs, tvecs)
 
         # project 3D points to image plane
-        imgpts, jac = cv.projectPoints(axis, rvecs, tvecs, mtx, dist)
+        # imgpts, jac = cv.projectPoints(axis, rvecs, tvecs, mtx, dist)
+        imgpts, jac = cv.projectPoints(axis, rvecs, tvecs, mtx, None)
+
 
         print("rvecs: ")
         print(rvecs)

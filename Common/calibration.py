@@ -15,20 +15,23 @@ class CameraCalibration():
     mtx: np.matrix
     dist: list
 
-    def serialize(self):
-        return {
+    def save(self, dataPath):
+        data = {
             "DIM": self.DIM,
             "mtx": np.asarray(self.mtx).tolist(),
             "dist": np.asarray(self.dist).tolist()
             }
+        with open(dataPath, 'w') as fp:
+            json.dump(data, fp, indent=4)
 
-    def unserialize(data):
-        return CameraCalibration(
-            data['DIM'],
-            np.array(data['mtx']),
-            np.array(data['dist'])
-        )
-
+    def load(dataPath):
+        with open(dataPath, 'r') as fp:
+            data = json.load(fp)
+            return CameraCalibration(
+                data['DIM'],
+                np.array(data['mtx']),
+                np.array(data['dist'])
+            )
 
 def getCameraCalibration(imagesPath : str, checkerboardSizeSize = (6, 9)):
 
@@ -92,16 +95,6 @@ def getCameraCalibration(imagesPath : str, checkerboardSizeSize = (6, 9)):
 
     return cameraCalib
 
-def saveConfigData(dataPath, data: CameraCalibration):
-    with open(dataPath, 'w') as fp:
-        serData = data.serialize()
-        json.dump(serData, fp, indent=4)
-
-def readConfigData(dataPath):
-    with open(dataPath, 'r') as fp:
-        data = json.load(fp)
-        return CameraCalibration.unserialize(data)
-
 def undistort(img, calibrationData: CameraCalibration, balance=1, dim2=None, dim3=None):
 
     DIM = calibrationData.DIM
@@ -134,8 +127,9 @@ def undistort(img, calibrationData: CameraCalibration, balance=1, dim2=None, dim
 if __name__ == "__main__":
     data = getCameraCalibration(".images")
 
-    saveConfigData("config.json", data)
-    data = readConfigData("config.json")
+    data.save("config.json")
+
+    data = CameraCalibration.load("config.json")
 
     img = cv2.imread(".images/3.jpg")
 

@@ -33,9 +33,7 @@ class CameraCalibration():
                 np.array(data['dist'])
             )
 
-def getCameraCalibration(imagesPath : str, checkerboardSizeSize = (6, 9)):
-
-    checkerboardSize = (6,9)
+def getCameraCalibration(imagesPath : str, checkerboardSize = (6, 9)):
 
     subpix_criteria = (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
     calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_FIX_SKEW
@@ -126,15 +124,11 @@ def undistort(img, calibrationData: CameraCalibration, balance=1, dim2=None, dim
 
 if __name__ == "__main__":
     data = getCameraCalibration(".images")
-
     data.save("config.json")
-
     data = CameraCalibration.load("config.json")
-
     img = cv2.imread(".images/3.jpg")
 
     m = np.mat(data.mtx)
-    print(m)
 
     undistorted_img = undistort(img, data)
 

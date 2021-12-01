@@ -6,6 +6,28 @@ assert cv2.__version__[0] >= '3', 'The fisheye module requires opencv version >=
 import numpy as np
 import glob
 import json
+from dataclasses import dataclass
+
+
+@dataclass()
+class CameraCalibration():
+    DIM: list
+    mtx: np.matrix
+    dist: list
+
+    def serialize(self):
+        return {
+            "DIM": self.DIM,
+            "mtx": np.asarray(self.mtx).tolist(),
+            "dist": np.asarray(self.dist).tolist()
+            }
+
+    def unserialize(data):
+        return CameraCalibration(
+            data['DIM'],
+            np.array(data['mtx']),
+            np.array(data['dist'])
+        )
 
 
 def getCameraCalibration(imagesPath : str, checkerboardSizeSize = (6, 9)):
@@ -64,31 +86,27 @@ def getCameraCalibration(imagesPath : str, checkerboardSizeSize = (6, 9)):
             (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6)
         )
 
-    # print(len(images), len(tvecs))
-    # for t in zip(images, tvecs):
-    #     print(t)
-
     DIM =_img_shape[::-1]
 
-    data = {'DIM': DIM,
-            'K': np.asarray(K).tolist(), 
-            'D':np.asarray(D).tolist()}
+    cameraCalib = CameraCalibration(DIM, K, D)
 
-    return data
+    return cameraCalib
 
-def saveConfigData(dataPath, data):
+def saveConfigData(dataPath, data: CameraCalibration):
     with open(dataPath, 'w') as fp:
-        json.dump(data, fp, indent=4)
+        serData = data.serialize()
+        json.dump(serData, fp, indent=4)
 
 def readConfigData(dataPath):
     with open(dataPath, 'r') as fp:
-        return json.load(fp)
+        data = json.load(fp)
+        return CameraCalibration.unserialize(data)
 
-def undistort(img, calibrationData, balance=1, dim2=None, dim3=None):
+def undistort(img, calibrationData: CameraCalibration, balance=1, dim2=None, dim3=None):
 
-    DIM = calibrationData['DIM']    
-    K = np.array(calibrationData['K'])
-    D = np.array(calibrationData['D'])
+    DIM = calibrationData.DIM
+    K = calibrationData.mtx
+    D = calibrationData.dist
 
     dim1 = img.shape[:2][::-1]  #dim1 is the dimension of input image to un-distort    
     
@@ -116,10 +134,13 @@ def undistort(img, calibrationData, balance=1, dim2=None, dim3=None):
 if __name__ == "__main__":
     data = getCameraCalibration(".images")
 
-    # saveConfigData("config.json", data)
+    saveConfigData("config.json", data)
     data = readConfigData("config.json")
 
     img = cv2.imread(".images/3.jpg")
+
+    m = np.mat(data.mtx)
+    print(m)
 
     undistorted_img = undistort(img, data)
 

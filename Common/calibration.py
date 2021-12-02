@@ -7,6 +7,7 @@ import numpy as np
 import glob
 import json
 from dataclasses import dataclass
+import detection
 
 
 @dataclass()
@@ -55,10 +56,11 @@ def getCameraCalibration(imagesPath : str, checkerboardSize = (6, 9)):
             _img_shape = img.shape[:2]
         else:
             assert _img_shape == img.shape[:2], "All images must share the same size."
+            
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
         # Find the chess board corners
-        ret, corners = cv2.findChessboardCorners(gray, checkerboardSize, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
+        ret, corners = detection.findChessboard(img)
 
         # If found, add object points, image points (after refining them)
         if ret == True:

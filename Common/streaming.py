@@ -4,6 +4,7 @@ import pickle
 import struct
 import simplejpeg
 import calibration
+import detection
 
 from time import sleep
 
@@ -12,10 +13,13 @@ payload_size = struct.calcsize("L") ### CHANGED
 cap = cv2.VideoCapture(0)
 
 class VideoStreamer():
-    def __init__(self, port):
+    def __init__(self, port, quality=None):
         self.port = port
 
+        self.quality = quality
+
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.setblocking(0)
         self.socket.bind(('', self.port))
         self.socket.listen(10)
@@ -33,7 +37,8 @@ class VideoStreamer():
             pass
 
     def sendFrame(self, frame=None):
-        frame = cv2.resize(frame, (720, 480))
+        if self.quality != None:
+            frame = cv2.resize(frame, self.quality)
 
         # Serialize frame
         data = simplejpeg.encode_jpeg(frame, 50)
@@ -54,17 +59,16 @@ class VideoStreamer():
             c.shutdown(2)
             c.close()
 
+calib = calibration.CameraCalibration.load("config.json")
+
 while True:
     try:
         v = VideoStreamer(8089)
         print("ready")
         break
     except OSError:
-        print(".", end="")
+        print("waiting")
         sleep(1)
-
-
-calib = calibration.CameraCalibration.load("config.json")
 
 
 
@@ -74,6 +78,10 @@ try:
         ret, frame = cap.read() 
         frame = cv2.resize(frame, calib.DIM)
         frame = calibration.undistort(frame, calib)
+
+        ret, corners = detection.findChessboard(frame, convertToGray=True, fast=True)
+        frame = cv2.drawChessboardCorners(frame, (6, 9), corners, ret)
+
 
         v.sendFrame(frame)
 

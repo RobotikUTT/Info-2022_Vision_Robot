@@ -4,21 +4,38 @@ import pickle
 import struct
 import simplejpeg
 
-cap=cv2.VideoCapture(0)
-clientsocket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-clientsocket.connect(('localhost',8089))
+HOST = ''
+PORT = 8089
+
+cap = cv2.VideoCapture(0)
+
+payload_size = struct.calcsize("L") ### CHANGED
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print('Socket created')
+
+s.bind((HOST, PORT))
+print('Socket bind complete')
+s.listen(10)
+print('Socket now listening')
+
+conn, addr = s.accept()
+
+data = b'' ### CHANGED
+
 
 while True:
-    ret,frame=cap.read()
+    ret,frame = cap.read()
+    frame = cv2.resize(frame, (720, 480))
+
     # Serialize frame
-
-    frame = cv2.resize(frame, (1080, 720))
-
-    data = simplejpeg.encode_jpeg(frame)
-    data = pickle.dumps(frame)
+    data = simplejpeg.encode_jpeg(frame, 1)
+    data = pickle.dumps(data)
 
     # Send message length first
     message_size = struct.pack("L", len(data)) ### CHANGED
 
     # Then data
-    clientsocket.sendall(message_size + data)
+    conn.sendall(message_size + data)
+
+    

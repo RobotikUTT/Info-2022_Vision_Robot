@@ -1,16 +1,17 @@
 import cv2
-import numpy as np
 import socket
 import pickle
 import struct
 
 import simplejpeg
 
+
+
 # cap=cv2.VideoCapture(0)
 clientsocket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-clientsocket.connect(('192.168.43.210',8089))
+clientsocket.connect(('192.168.43.184',8089))
 
-payload_size = struct.calcsize("L") ### CHANGED
+payload_size = struct.calcsize("=L") ### CHANGED
 
 data = b'' ### CHANGED
 
@@ -21,7 +22,7 @@ while True:
 
     packed_msg_size = data[:payload_size]
     data = data[payload_size:]
-    msg_size = struct.unpack("L", packed_msg_size)[0] ### CHANGED
+    msg_size = struct.unpack("=L", packed_msg_size)[0] ### CHANGED
 
     # Retrieve all data based on message size
     while len(data) < msg_size:
@@ -32,8 +33,9 @@ while True:
 
     # Extract frame
     frame = pickle.loads(frame_data)
-
     frame = simplejpeg.decode_jpeg(frame)
+
+    frame = cv2.resize(frame, (1080, 720))
 
     # Display
     cv2.imshow('frame', frame)

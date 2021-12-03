@@ -21,10 +21,20 @@ class VideoStreamer():
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.setblocking(0)
-        self.socket.bind(('', self.port))
-        self.socket.listen(10)
+        
         
         self.connections = []
+
+    def start(self, keepTrying=True):
+        while True:
+            try:
+                self.socket.bind(('', self.port))
+                self.socket.listen(10)
+                break
+            except OSError:
+                if not keepTrying: break
+                sleep(1)
+        
 
     def checkConnections(self):
         try:
@@ -59,32 +69,25 @@ class VideoStreamer():
             c.shutdown(2)
             c.close()
 
-calib = calibration.CameraCalibration.load("config.json")
+if __name__ == "__main__":
+    calib = calibration.CameraCalibration.load("config.json")
 
-while True:
+    v = VideoStreamer(8089, calib.DIM)
+    v.start()
+
     try:
-        v = VideoStreamer(8089)
-        print("ready")
-        break
-    except OSError:
-        print("waiting")
-        sleep(1)
+        while True:
+            v.checkConnections()
+            ret, frame = cap.read() 
+            frame = cv2.resize(frame, calib.DIM)
+            # frame = calibration.undistort(frame, calib)
+
+            # ret, corners = detection.findChessboard(frame, convertToGray=True, fast=True)
+            # frame = cv2.drawChessboardCorners(frame, (6, 9), corners, ret)
 
 
+            v.sendFrame(frame)
 
-try:
-    while True:
-        v.checkConnections()
-        ret, frame = cap.read() 
-        frame = cv2.resize(frame, calib.DIM)
-        frame = calibration.undistort(frame, calib)
-
-        ret, corners = detection.findChessboard(frame, convertToGray=True, fast=True)
-        frame = cv2.drawChessboardCorners(frame, (6, 9), corners, ret)
-
-
-        v.sendFrame(frame)
-
-except KeyboardInterrupt:
-    print("quitting")
-    v.closeAll()
+    except KeyboardInterrupt:
+        print("quitting")
+        v.closeAll()

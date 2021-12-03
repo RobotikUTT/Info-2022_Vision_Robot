@@ -1,6 +1,5 @@
 # https://medium.com/@kennethjiang/calibrate-fisheye-lens-using-opencv-333b05afa0b0
 
-import yaml
 import cv2
 assert cv2.__version__[0] >= '3', 'The fisheye module requires opencv version >= 3.0.0'
 import numpy as np
@@ -64,6 +63,7 @@ def getCameraCalibration(imagesPath : str, checkerboardSize = (6, 9)):
 
         # If found, add object points, image points (after refining them)
         if ret == True:
+            print(f"Found: {fname}")
             objpoints.append(objp)
             cv2.cornerSubPix(gray,corners,(3,3),(-1,-1),subpix_criteria)
             imgpoints.append(corners)
@@ -90,7 +90,6 @@ def getCameraCalibration(imagesPath : str, checkerboardSize = (6, 9)):
         )
 
     DIM =_img_shape[::-1]
-
     cameraCalib = CameraCalibration(DIM, K, D)
 
     return cameraCalib
@@ -123,7 +122,6 @@ def undistort(img, calibrationData: CameraCalibration, balance=1, dim2=None, dim
 
     return undistorted_img
 
-
 if __name__ == "__main__":
     data = getCameraCalibration(".images")
     data.save("config.json")
@@ -136,4 +134,3 @@ if __name__ == "__main__":
 
     cv2.imshow("test", undistorted_img)
     cv2.waitKey(100000)
-

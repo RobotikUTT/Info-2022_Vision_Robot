@@ -1,16 +1,15 @@
+#!/bin/python3
 import cv2
 import socket
 import pickle
 import struct
 import simplejpeg
 import calibration
-import detection
+import os
 
 from time import sleep
 
 payload_size = struct.calcsize("L") ### CHANGED
-
-cap = cv2.VideoCapture(0)
 
 class VideoStreamer():
     def __init__(self, port, quality=None):
@@ -61,6 +60,7 @@ class VideoStreamer():
             try:
                 conn.sendall(message_size + data)
             except (ConnectionResetError, BrokenPipeError):
+                print(f"closing: {conn}")
                 conn.close()
                 self.connections.remove(conn)
 
@@ -70,7 +70,15 @@ class VideoStreamer():
             c.close()
 
 if __name__ == "__main__":
-    calib = calibration.CameraCalibration.load("config.json")
+    cap = cv2.VideoCapture(0)
+
+    # A test configuration file exists in the same folder as this script. 
+    # Because relative paths are weird (depending from where you called the script), 
+    # we need to get the current script's path and add the name of the configuration file.
+    dirname = os.path.dirname(__file__)
+    configFilePath = os.path.join(dirname, "testConfig.json")
+
+    calib = calibration.CameraCalibration.load(configFilePath)
 
     v = VideoStreamer(8089, calib.DIM)
     v.start()
@@ -80,11 +88,6 @@ if __name__ == "__main__":
             v.checkConnections()
             ret, frame = cap.read() 
             frame = cv2.resize(frame, calib.DIM)
-            # frame = calibration.undistort(frame, calib)
-
-            # ret, corners = detection.findChessboard(frame, convertToGray=True, fast=True)
-            # frame = cv2.drawChessboardCorners(frame, (6, 9), corners, ret)
-
 
             v.sendFrame(frame)
 

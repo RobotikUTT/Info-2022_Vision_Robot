@@ -50,7 +50,7 @@ class VideoStreamer():
             frame = cv2.resize(frame, self.quality)
 
         # Serialize frame
-        data = simplejpeg.encode_jpeg(frame, 50)
+        data = simplejpeg.encode_jpeg(frame, 90)
         data = pickle.dumps(data)
 
         # Send message length first
@@ -80,14 +80,14 @@ if __name__ == "__main__":
 
     calib = calibration.CameraCalibration.load(configFilePath)
 
-    v = VideoStreamer(8089, calib.DIM)
+    v = VideoStreamer(1234, calib.DIM)
     v.start()
 
     try:
         while True:
             v.checkConnections()
             ret, frame = cap.read() 
-            frame = cv2.resize(frame, calib.DIM)
+            # frame = cv2.resize(frame, calib.DIM)
 
             v.sendFrame(frame)
 

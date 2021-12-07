@@ -1,3 +1,4 @@
+#!/bin/python3
 # https://medium.com/@kennethjiang/calibrate-fisheye-lens-using-opencv-333b05afa0b0
 
 import cv2
@@ -7,6 +8,7 @@ import glob
 import json
 from dataclasses import dataclass
 import detection
+import streaming
 
 
 @dataclass()
@@ -36,7 +38,7 @@ class CameraCalibration():
 def getCameraCalibration(imagesPath : str, checkerboardSize = (6, 9)):
 
     subpix_criteria = (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
-    calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_FIX_SKEW
+    calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_FIX_SKEW+cv2.CALIB_RATIONAL_MODEL
 
     # objp gives the positions of all the points on a checkerboard
     objp = np.zeros((1, checkerboardSize[0]*checkerboardSize[1], 3), np.float32)
@@ -123,14 +125,25 @@ def undistort(img, calibrationData: CameraCalibration, balance=1, dim2=None, dim
     return undistorted_img
 
 if __name__ == "__main__":
+    cap = cv2.VideoCapture(0)
+
     data = getCameraCalibration(".images")
     data.save("config.json")
+    print("done calibrating")
+
     data = CameraCalibration.load("config.json")
-    img = cv2.imread(".images/3.jpg")
 
     m = np.mat(data.mtx)
 
-    undistorted_img = undistort(img, data)
+
+    stream = streaming.VideoStreamer(1234)
+    stream.start()
+
+    while True:
+        ret, frame = cap.read()
+        frame = undistort(frame, data)
+        stream.checkConnections()
+        stream.sendFrame(frame)
 
     cv2.imshow("test", undistorted_img)
     cv2.waitKey(100000)

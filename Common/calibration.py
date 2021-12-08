@@ -9,33 +9,34 @@ import json
 from dataclasses import dataclass
 import detection
 import streaming
+import pickle
 
+global test_map1
+# global test2_map1
 
 @dataclass()
 class CameraCalibration():
+    """A dataclass to hold the calibration data for a specific camera.
+
+    Args:
+        DIM : The dimmension of the images used during calibration.
+    """
     DIM: list
     mtx: np.matrix
     dist: list
+    map1: np.ndarray
+    map2: np.ndarray
 
     def save(self, dataPath):
-        data = {
-            "DIM": self.DIM,
-            "mtx": np.asarray(self.mtx).tolist(),
-            "dist": np.asarray(self.dist).tolist()
-            }
-        with open(dataPath, 'w') as fp:
-            json.dump(data, fp, indent=4)
+        with open(dataPath, 'wb') as fp:
+            pickle.dump(self, fp)
 
     def load(dataPath):
-        with open(dataPath, 'r') as fp:
-            data = json.load(fp)
-            return CameraCalibration(
-                data['DIM'],
-                np.array(data['mtx']),
-                np.array(data['dist'])
-            )
+        with open(dataPath, 'rb') as fp:
+            return pickle.load(fp)
 
-def getCameraCalibration(imagesPath : str, checkerboardSize = (6, 9)):
+
+def getCameraCalibration(imagesPath : str, checkerboardSize = (6, 9)) -> CameraCalibration:
 
     subpix_criteria = (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
     calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_FIX_SKEW+cv2.CALIB_RATIONAL_MODEL
@@ -92,49 +93,37 @@ def getCameraCalibration(imagesPath : str, checkerboardSize = (6, 9)):
         )
 
     DIM =_img_shape[::-1]
-    cameraCalib = CameraCalibration(DIM, K, D)
 
-    return cameraCalib
-
-def undistort(img, calibrationData: CameraCalibration, balance=1, dim2=None, dim3=None):
-
-    DIM = calibrationData.DIM
-    K = calibrationData.mtx
-    D = calibrationData.dist
-
-    dim1 = img.shape[:2][::-1]  #dim1 is the dimension of input image to un-distort    
-    
-    assert dim1[0]/dim1[1] == DIM[0]/DIM[1], "Image to undistort needs to have same aspect ratio as the ones used in calibration"
-    
-    if not dim2:
-        dim2 = dim1    
-
-    if not dim3:
-        dim3 = dim1    
-        
-    scaled_K = K * dim1[0] / DIM[0]  # The values of K is to scale with image dimension.
-
+    # scaled_K = K * dim1[0] / DIM[0]  # The values of K is to scale with image dimension.
+    scaled_K = K
     scaled_K[2][2] = 1.0  # Except that K[2][2] is always 1.0    
     
     # This is how scaled_K, dim2 and balance are used to determine the final K used to un-distort image. OpenCV document failed to make this clear!
-    new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(scaled_K, D, dim2, np.eye(3), balance=balance)
+    new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(scaled_K, D, DIM, np.eye(3), balance=1)
+    map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, D, np.eye(3), new_K, DIM, cv2.CV_16SC2)
 
-    map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, D, np.eye(3), new_K, dim3, cv2.CV_16SC2)
-    undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    cameraCalib = CameraCalibration(DIM, K, D, map1, map2)
 
-    return undistorted_img
+    return cameraCalib
+
+def undistort(img, calibrationData: CameraCalibration):
+
+    DIM = calibrationData.DIM
+    map1 = calibrationData.map1
+    map2 = calibrationData.map2
+
+    dim1 = img.shape[:2][::-1]  #dim1 is the dimension of input image to un-distort    
+    assert list(dim1) == list(DIM), "Image to undistort needs to have the same dimmensions as the ones used in calibration"
+
+    return cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
 if __name__ == "__main__":
     cap = cv2.VideoCapture(0)
 
-    data = getCameraCalibration(".images")
-    data.save("config.json")
-    print("done calibrating")
-
+    # data = getCameraCalibration(".images")
+    # data.save("config.json")
+    
     data = CameraCalibration.load("config.json")
-
-    m = np.mat(data.mtx)
-
 
     stream = streaming.VideoStreamer(1234)
     stream.start()
@@ -144,6 +133,3 @@ if __name__ == "__main__":
         frame = undistort(frame, data)
         stream.checkConnections()
         stream.sendFrame(frame)
-
-    cv2.imshow("test", undistorted_img)
-    cv2.waitKey(100000)

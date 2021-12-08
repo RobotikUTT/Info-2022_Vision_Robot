@@ -11,8 +11,18 @@ from time import sleep
 
 payload_size = struct.calcsize("L") ### CHANGED
 
+
 class VideoStreamer():
+    """This class is responsible for keeping several streaming sockets open, and allows frames to be sent to all clients."""
+    
     def __init__(self, port, quality=None):
+        """Constructor for VideoStreamer.
+
+        Args:
+            port (int): The port on which to supply the video stream.
+            quality (tuple(int, int), optional): The dimmensions to which each will be resized before being sent. If left as None, the frames will not be resized.
+        """
+
         self.port = port
 
         self.quality = quality
@@ -25,6 +35,11 @@ class VideoStreamer():
         self.connections = []
 
     def start(self, keepTrying=True):
+        """Starts the stream, as in opens the port given to the constructor.
+
+        Args:
+            keepTrying (bool, optional): Whether this function will hang/loop until the server can be opened (say if the port was already open). Defaults to True.
+        """
         while True:
             try:
                 self.socket.bind(('', self.port))
@@ -36,6 +51,8 @@ class VideoStreamer():
         
 
     def checkConnections(self):
+        """Check to see if there are new clients. Should be run regularly (like every time you send a frame).
+        """
         try:
             conn, addr = self.socket.accept()
             self.connections.append(conn)
@@ -46,6 +63,11 @@ class VideoStreamer():
             pass
 
     def sendFrame(self, frame=None):
+        """Sends a frame to all clients. The server must have been previously started (see :func:`VideoStreamer.start`)
+
+        Args:
+            frame ([type], optional): [description]. Defaults to None.
+        """
         if self.quality != None:
             frame = cv2.resize(frame, self.quality)
 
@@ -65,6 +87,8 @@ class VideoStreamer():
                 self.connections.remove(conn)
 
     def closeAll(self):
+        """Close all client connections.
+        """
         for c in self.connections:
             c.shutdown(2)
             c.close()

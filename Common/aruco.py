@@ -25,7 +25,8 @@ calib = calibration.CameraCalibration.load("config.json")
 while True:
     ret, frame = cap.read()
     frame = calibration.undistort(frame, calib)
-    corners, ids, rejected = cv2.aruco.detectMarkers(frame, arucoDict, parameters=arucoParams)
+    corners, ids, rejected = cv2.aruco.detectMarkers(
+        frame, arucoDict, parameters=arucoParams)
 
     if not ids is None:
         for (markerCorner, markerID) in zip(corners, ids):
@@ -43,10 +44,9 @@ while True:
             cv2.line(frame, bottomLeft, topLeft, (0, 255, 0), 2)
 
             cv2.putText(frame, str(markerID), (topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX,
-			0.5, (0, 255, 0), 2)
+                        0.5, (0, 255, 0), 2)
 
     stream.checkConnections()
     stream.sendFrame(frame)
 
     # sleep(1)
-

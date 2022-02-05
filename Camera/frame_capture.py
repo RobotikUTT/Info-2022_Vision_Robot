@@ -1,7 +1,7 @@
 from threading import Thread
 import numpy as np
 import cv2
-from frame_supplier import FrameSupplier
+from Common.frame_supplier import FrameSupplier
 
 # Weird resolutions:
 # https://raspberrypi.stackexchange.com/questions/107161/picamera-exe-picameraioerror-failed-to-write-291840-bytes-from-buffer-to-output
@@ -23,8 +23,8 @@ class FrameCaptureThread(Thread, FrameSupplier):
     # If the thread hasn't been started, the frame will just be solid black.
     # It derives from FrameSupplier, a custom class desgined to supply a frame.
 
-    def __init__(self, capture_resolution=RES_2560x1920):
-        Thread.__init__(self, daemon=True)
+    def __init__(self, daemon=True, capture_resolution=RES_2560x1920):
+        Thread.__init__(self, daemon=daemon)
         FrameSupplier.__init__(self)
 
         # Create a blank frame whilst waiting for the first frame to be captured
@@ -33,9 +33,6 @@ class FrameCaptureThread(Thread, FrameSupplier):
 
         self.resolution_has_changed = False
         self.set_resolution(capture_resolution)
-
-    def _get_current_frame(self):
-        return self._current_frame
 
     def set_resolution(self, capture_resolution):
         self.capture_resolution = capture_resolution
@@ -58,5 +55,6 @@ class FrameCaptureThread(Thread, FrameSupplier):
             if not ret:
                 print("couldn't capture frame")
                 continue
-
-            self.set_current_frame(frame)
+            
+            if not self.resolution_has_changed:
+                self.set_frame(frame)

@@ -1,9 +1,11 @@
 import argparse
+import json
 from Scripts.aruco_detection import aruco_detection
 from Scripts.corrected_preview import corrected_preview
 from Scripts.generate_calibration import generate_calibration
 from Scripts.image_capture import begin_image_capture
 from Scripts.image_preview import image_preview
+from Scripts.pose_estimation import pose_estimation
 
 parser = argparse.ArgumentParser(
     description="Main entry point."
@@ -24,25 +26,31 @@ img_pre = subparser.add_parser('raw',
 img_cap = subparser.add_parser('img_cap', 
     help="Capture images for the purposes of calibrating the camera."
 )
+img_cap.add_argument('--img_folder', "-i", default="/tmp/calibration_img",
+    help="The folder in which the calibration images will be stored."
+)
 
 gen_calib = subparser.add_parser('gen_calib', 
     help='''Create a camera calibration file from a folder containing calibration 
             images (see 'img_cap').'''
 )
+gen_calib.add_argument('--img_folder', "-i", default="/tmp/calibration_img", 
+    help="The folder containing the images to be used to generate the calibration file."
+)
+
 undistorted = subparser.add_parser('corrected',
     help="Start a preview of the corrected camera view."
 )
+
 aruco = subparser.add_parser('aruco_detection',
     help="Output a list of detected aruco codes as well as the screen coordinates of their corners."
 )
 
-img_cap.add_argument('--img_folder', "-i", default="/tmp/calibration_img",
-    help="The folder in which the calibration images will be stored."
+pose_estim = subparser.add_parser('pose_estimation',
+    help="Ouput the real world positions of detected aruco codes based on the given positions of known aruco codes."
 )
+pose_estim.add_argument('--known_codes', '-c', default="known_codes.json")
 
-gen_calib.add_argument('--img_folder', "-i", default="/tmp/calibration_img", 
-    help="The folder containing the images to be used to generate the calibration file."
-)
 
 args = parser.parse_args()
 print(args)
@@ -60,3 +68,5 @@ elif cmd == "corrected":
     corrected_preview(args.calib_file, preview_url)
 elif cmd == "aruco_detection":
     aruco_detection(preview_url, calib_file)
+elif cmd == "pose_estimation":        
+    pose_estimation(preview_url, calib_file, args.known_codes)

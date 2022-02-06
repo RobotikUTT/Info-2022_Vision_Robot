@@ -62,7 +62,7 @@ while True:
 
     rMat = cv2.Rodrigues(rvec)[0]
     
-    camera_pos = -rMat.T.dot(np.array(tvec))
+    camera_pos = -rMat.T.dot(tvec)
 
     for code in unknown:
         c = code.corners[0]

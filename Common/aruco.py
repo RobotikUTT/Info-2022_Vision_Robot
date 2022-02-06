@@ -19,7 +19,7 @@ class ArucoCode:
     id: int
 
 
-class ArucoTrackerThread(FrameSupplier, FrameConsumerThread):
+class ArucoTrackerThread(FrameConsumerThread):
     # This threaded class detects and stores arucos codes, as well as supplies the frame for which
     # the codes were detected.
     # Why supply the frame as well ? Sometimes you will need to have the detected codes as well as
@@ -27,9 +27,9 @@ class ArucoTrackerThread(FrameSupplier, FrameConsumerThread):
 
     def __init__(self, frame_supplier: FrameSupplier, daemon=True):
         FrameConsumerThread.__init__(self, frame_supplier, self.on_frame, daemon=daemon)
-        FrameSupplier.__init__(self)
 
-        self.frame_codes_tuple = (None, [])
+        self._codes = None
+
         self._aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_100)
         self._aruco_params = cv2.aruco.DetectorParameters_create()
 
@@ -51,15 +51,8 @@ class ArucoTrackerThread(FrameSupplier, FrameConsumerThread):
         self.frame_codes_tuple = (frame, codes)
         self.set_new_frame_available()
 
-    def get_frame(self):
-        return self.frame_codes_tuple[0]
-
     def get_codes(self):
         return self.frame_codes_tuple[1]
-
-    def get_frame_and_codes(self):
-        return self.frame_codes_tuple
-
 
 if __name__ == "__main__":
     config = CameraCalibration.load_from_file("config.json")

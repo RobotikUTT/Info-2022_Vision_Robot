@@ -1,3 +1,4 @@
+from typing import Tuple
 from Camera.calibration import CameraCalibration
 from Common.frame_consumer import FrameConsumerThread
 from Common.frame_supplier import FrameSupplier

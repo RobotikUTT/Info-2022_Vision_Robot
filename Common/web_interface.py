@@ -12,8 +12,8 @@ import numpy as np
 @dataclass
 class StreamConfiguration:
     frame_supplier: FrameSupplier
-    resize: Tuple[int, int] = None
-    crop: Tuple[int, int, int, int] = None
+    resize: Tuple[int, int] | None = None
+    crop: Tuple[int, int, int, int] | None = None
     quality: int = 85
 
 

@@ -2,8 +2,9 @@ from threading import Thread
 from typing import Tuple
 import numpy as np
 import cv2
-from Common.frame_supplier import FrameSupplier
+from Camera.frames import FrameSupplier
 from Common.types import Frame
+from typing import cast
 
 # Weird resolutions:
 # https://raspberrypi.stackexchange.com/questions/107161/picamera-exe-picameraioerror-failed-to-write-291840-bytes-from-buffer-to-output
@@ -20,43 +21,30 @@ RES_2560x1920 = (2560, 1920)
 
 
 class FrameCaptureThread(Thread, FrameSupplier):
-    # This class is responsible for grabbing the frames from the Pi Camera on its own thread.
-    # If the thread hasn't been started, the frame will just be solid black.
-    # It derives from FrameSupplier, a custom class desgined to supply a frame.
-
-    def __init__(self, daemon: bool = True, capture_resolution: Tuple[int, int]=RES_2560x1920):
+    def __init__(self, daemon: bool = True, capture_resolution: Tuple[int, int]=RES_2560x1920) -> None:
         Thread.__init__(self, daemon=daemon)
         FrameSupplier.__init__(self)
 
-        # Create a blank frame whilst waiting for the first frame to be captured
         res = capture_resolution
-        self._current_frame = np.empty((res[1], res[0], 3), dtype=np.uint8)
 
-        self.resolution_has_changed = False
-        self.set_resolution(capture_resolution)
+        # Create a blank frame whilst waiting for the first frame to be captured
+        self._frame = cast(Frame, np.empty((res[1], res[0], 3), dtype=np.uint8)) # type: Frame
 
-    def set_resolution(self, capture_resolution):
-        self.capture_resolution = capture_resolution
-        self.resolution_has_changed = True
+    def set_frame(self, frame: Frame) -> None:
+        self._frame = frame
+        self.notify()
 
-    def get_resolution(self):
-        return self.capture_resolution
+    def get_frame(self) -> Frame:
+        return self._frame
 
     # Target of the capture thread
-    def run(self):
+    def run(self) -> None:
         cap = cv2.VideoCapture(0)
         cap.set(cv2.CAP_PROP_EXPOSURE, 100)
         while True:
-            if self.resolution_has_changed:
-                self.resolution_has_changed = False
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.capture_resolution[1])
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.capture_resolution[0])
-
             ret, frame = cap.read()
             if not ret:
                 print("couldn't capture frame")
                 continue
             
-            # If the resolution has changed whilst capturing the frame, we must disgard it.
-            if not self.resolution_has_changed:
-                self.set_frame(frame)
+            self.set_frame(frame)

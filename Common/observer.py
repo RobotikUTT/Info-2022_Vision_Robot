@@ -1,4 +1,5 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 from typing import List
 
 class Subject:
@@ -33,11 +34,12 @@ class Subject:
         for observer in self.observers:
             observer.update(self)
 
-class Observer():
+class Observer(ABC):
     """
     Observer part of the observer design pattern. Override the the `update` method to use this class.
     """
 
+    @abstractmethod
     def update(self, subject: Subject) -> None:
         """Method called by the subject when an event happens.
 
